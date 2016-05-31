@@ -10,9 +10,10 @@ mkdir -p $p_asteroides/{c_abundFilter,compAnalysis,resources,blast_out}
 script_path=$p_asteroides/scripts
 abundFilter=$p_asteroides/c_abundFilter   ## copy the filtered reads from the p_asteroides assembly project
 compAnalysis=$p_asteroides/compAnalysis   ## copy the annotated transcripome from the p_asteroides assembly project
-univec_ann_exp_tran=$p_asteroides/compAnalysis/Trinity.clean.201.exp.UniVec.fasta
-swiss_ann=$p_asteroides/compAnalysis/uniprot_sprot.blastx.outfmt6.sig.best.exp2.univec
-LongORFs=$p_asteroides/compAnalysis/longest_orfs.pep.exp2.univec
+FCS_ann_exp_tran=$p_asteroides/compAnalysis/Trinity.clean.201.exp.FCS.fasta
+swiss_ann=$p_asteroides/compAnalysis/uniprot_sprot.blastx.outfmt6.sig.best.exp2.FCS
+LongOrfs=$p_asteroides/compAnalysis/longest_orfs.pep.exp2.FCS
+gene_transcript_map=$p_asteroides/compAnalysis/gene_trans_map.3
 ########################
 ## blast out transcriptome aganist other known coral and Cnidarian sequences
 bash prepResources.sh "${p_asteroides}"
@@ -20,7 +21,7 @@ bash prepResources.sh "${p_asteroides}"
 module load BLAST+/2.2.30
 cd ${p_asteroides}/resources/symb_trans
 makeblastdb -in symb_trans.fasta -input_type fasta -dbtype nucl
-blastn -query $univec_ann_exp_tran \
+blastn -query $FCS_ann_exp_tran \
        -db ${p_asteroides}/resources/symb_trans/symb_trans.fasta \
        -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
        -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 \
@@ -28,20 +29,27 @@ blastn -query $univec_ann_exp_tran \
 sort -k1,1 -k11,11g ${p_asteroides}/blast_out/trinityVsSymb | sort -u -k1,1 --merge > ${p_asteroides}/blast_out/trinityVsSymb_best
 
 cd ${p_asteroides}/blast_out
-grep "^>" $univec_ann_exp_tran | wc -l        ## 868905
-wc -l trinityVsSymb_best ## 188592
+grep "^>" $FCS_ann_exp_tran | wc -l        ## 867255
+wc -l trinityVsSymb_best ## 188089
 cat trinityVsSymb_best | awk '$11 <= 1e-5' > trinityVsSymb_best.sig
-wc -l trinityVsSymb_best.sig ## 186670
+wc -l trinityVsSymb_best.sig ## 186177
 cat trinityVsSymb_best.sig | awk -F '[\t.]' '{A[$2]++}END{for(i in A)print i,A[i]}' | sort -k2,2nr > symb.mapping_rates
 
 module load QIIME/1.8.0
-filter_fasta.py --input_fasta_fp $univec_ann_exp_tran --output_fasta_fp trinityVsSymb_best.sig.fasta --seq_id_fp trinityVsSymb_best.sig
-grep "^>" trinityVsSymb_best.sig.fasta | wc -l  ## 186670
+filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp trinityVsSymb_best.sig.fasta --seq_id_fp trinityVsSymb_best.sig
+grep "^>" trinityVsSymb_best.sig.fasta | wc -l  ## 186177
 
-filter_fasta.py --input_fasta_fp $univec_ann_exp_tran --output_fasta_fp noSymb.fasta --seq_id_fp trinityVsSymb_best.sig --negate
-grep "^>" noSymb.fasta | wc -l  ## 682235
+filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp noSymb.fasta --seq_id_fp trinityVsSymb_best.sig --negate
+grep "^>" noSymb.fasta | wc -l  ## 681078
 noSymb_transcriptome=${p_asteroides}/blast_out/noSymb.fasta
+
+## select annotation for significant hits
+#cat trinityVsSymb_best.sig | awk '{print ">"$1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.trinityVsSymb.key
+#filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp $LongOrfs.trinityVsSymb --seq_id_fp LongOrfs.trinityVsSymb.key
+#filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp $LongOrfs.trinityVsSymb.complete --seq_id_fp LongOrfs.trinityVsSymb.key
+#cat trinityVsSymb_best.sig | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.trinityVsSymb
 ######################################
+
 cd ${p_asteroides}/resources/coral_trans
 makeblastdb -in coral_trans.fasta -input_type fasta -dbtype nucl
 blastn -query $noSymb_transcriptome \
@@ -52,17 +60,23 @@ blastn -query $noSymb_transcriptome \
 sort -k1,1 -k11,11g ${p_asteroides}/blast_out/trinityVscoralTrans | sort -u -k1,1 --merge > ${p_asteroides}/blast_out/trinityVscoralTrans_best
 
 cd ${p_asteroides}/blast_out
-wc -l trinityVscoralTrans_best ## 93078
+wc -l trinityVscoralTrans_best ## 92944
 cat trinityVscoralTrans_best | awk '$11 <= 1e-5' > trinityVscoralTrans_best.sig
-wc -l trinityVscoralTrans_best.sig ## 92454
+wc -l trinityVscoralTrans_best.sig ## 92332
 cat trinityVscoralTrans_best.sig | awk -F '[\t.]' '{A[$2]++}END{for(i in A)print i,A[i]}' | sort -k2,2nr > coralTrans.mapping_rates
 
 filter_fasta.py --input_fasta_fp $noSymb_transcriptome --output_fasta_fp trinityVscoralTrans_best.sig.fasta --seq_id_fp trinityVscoralTrans_best.sig
-grep "^>" trinityVscoralTrans_best.sig.fasta | wc -l  ## 92454
+grep "^>" trinityVscoralTrans_best.sig.fasta | wc -l  ## 92332
 
 filter_fasta.py --input_fasta_fp $noSymb_transcriptome --output_fasta_fp noSymb_noCoralTrans.fasta --seq_id_fp trinityVscoralTrans_best.sig --negate
-grep "^>" noSymb_noCoralTrans.fasta | wc -l  ## 589781
+grep "^>" noSymb_noCoralTrans.fasta | wc -l  ## 588746
 noSymb_noCoralTrans_transcriptome=${p_asteroides}/blast_out/noSymb_noCoralTrans.fasta
+
+## select annotation for significant hits
+#cat trinityVscoralTrans_best.sig | awk '{print ">"$1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.trinityVscoralTrans.key
+#filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp $LongOrfs.trinityVscoralTrans --seq_id_fp LongOrfs.trinityVscoralTrans.key
+#filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp $LongOrfs.trinityVscoralTrans.complete --seq_id_fp LongOrfs.trinityVscoralTrans.key
+#cat trinityVscoralTrans_best.sig | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.trinityVscoralTrans
 ######################################
 cd ${p_asteroides}/resources/coral_genomic
 makeblastdb -in coral_genomic.fasta -input_type fasta -dbtype nucl
@@ -74,28 +88,42 @@ blastn -query $noSymb_noCoralTrans_transcriptome \
 sort -k1,1 -k11,11g ${p_asteroides}/blast_out/trinityVscoralGenomic | sort -u -k1,1 --merge > ${p_asteroides}/blast_out/trinityVscoralGenomic_best
 
 cd ${p_asteroides}/blast_out
-wc -l trinityVscoralGenomic_best ## 38701
+wc -l trinityVscoralGenomic_best ## 38665
 cat trinityVscoralGenomic_best | awk '$11 <= 1e-5' > trinityVscoralGenomic_best.sig
-wc -l trinityVscoralGenomic_best.sig ## 37448
+wc -l trinityVscoralGenomic_best.sig ## 37414
 cat trinityVscoralGenomic_best.sig | awk -F '[\t.]' '{A[$2]++}END{for(i in A)print i,A[i]}' | sort -k2,2nr > coralGenomics.mapping_rates
 
 filter_fasta.py --input_fasta_fp $noSymb_noCoralTrans_transcriptome --output_fasta_fp trinityVscoralGenomic_best.sig.fasta --seq_id_fp trinityVscoralGenomic_best.sig
-grep "^>" trinityVscoralGenomic_best.sig.fasta | wc -l  ## 37448
+grep "^>" trinityVscoralGenomic_best.sig.fasta | wc -l  ## 37414
 
 filter_fasta.py --input_fasta_fp $noSymb_noCoralTrans_transcriptome --output_fasta_fp unrecognized.fasta --seq_id_fp trinityVscoralGenomic_best.sig --negate
-grep "^>" unrecognized.fasta | wc -l  ## 552333
+grep "^>" unrecognized.fasta | wc -l  ## 551332
 unrecognized=${p_asteroides}/blast_out/unrecognized.fasta
 
-cat trinityVscoralTrans_best.sig trinityVscoralGenomic_best.sig > trinityVscoral_best.sig
+cat trinityVscoralTrans_best.sig trinityVscoralGenomic_best.sig > trinityVscoral_best.sig ## 129746
 cat trinityVsSymb_best.sig trinityVscoral_best.sig > recognized_best.sig
 cat trinityVscoralTrans_best.sig.fasta trinityVscoralGenomic_best.sig.fasta > coral_transcriptome.fasta
 cat trinityVsSymb_best.sig.fasta coral_transcriptome.fasta > recognized.fasta
+
 coral_transcriptome=${p_asteroides}/blast_out/coral_transcriptome.fasta
 recognized_transcriptome=${p_asteroides}/blast_out/recognized.fasta
+
+## select annotation for significant hits
+#cat trinityVscoralGenomic_best.sig | awk '{print ">"$1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.trinityVscoralGenomic.key
+#filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp $LongOrfs.trinityVscoralGenomic --seq_id_fp LongOrfs.trinityVscoralGenomic.key
+#filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp $LongOrfs.trinityVscoralGenomic.complete --seq_id_fp LongOrfs.trinityVscoralGenomic.key
+#cat trinityVscoralGenomic_best.sig | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.trinityVscoralGenomic
+
+#cat $LongOrfs.trinityVscoralTrans $LongOrfs.trinityVscoralGenomic > $LongOrfs.trinityVscoral
+#cat $LongOrfs.trinityVsSymb $LongOrfs.trinityVscoral > $LongOrfs.recognized
+#cat $LongOrfs.trinityVscoralTrans.complete $LongOrfs.trinityVscoralGenomic.complete > $LongOrfs.trinityVscoral.complete
+#cat $LongOrfs.trinityVsSymb.complete $LongOrfs.trinityVscoral.complete > $LongOrfs.recognized.complete
+#cat $swiss_ann.trinityVscoralTrans $swiss_ann.trinityVscoralGenomic > $swiss_ann.trinityVscoral
+#cat $swiss_ann.trinityVsSymb $swiss_ann.trinityVscoral > $swiss_ann.recognized
 ##################
 ## Abundance estimation
 cd $compAnalysis
-qsub -v index="salmon_index",transcriptome="$univec_ann_exp_tran" ${script_path}/salmonIndex.sh
+qsub -v index="salmon_index",transcriptome="$FCS_ann_exp_tran" ${script_path}/salmonIndex.sh
 
 cd $abundFilter
 for f in $p_asteroides/c_abundFilter/*.s_pe.fq.1; do if [ -f $f ]; then
@@ -114,12 +142,13 @@ echo "transcript"$'\t'"length" > transcripts.lengthes
 sf=$(find ./*.quant -name \*.sf | head -n1)
 cat $sf | grep -v "^#" | awk -F "\t" -v OFS='\t' '{print $1,$2}' >> transcripts.lengthes
 
-module load R/3.0.1
+#module load R/3.0.1
 while read identifier;do
   echo $(pwd) $identifier
-  Rscript ${script_path}/calcTPM_tis.R "$(pwd)" "$identifier" "transcripts.lengthes" "$gene_transcript_map" >> targets_list
+  bash $script_path/run_calcTPM.sh "$(pwd)" "$identifier" "transcripts.lengthes" "$gene_transcript_map" ${script_path}/calcTPM2.R
+  #Rscript ${script_path}/calcTPM2.R "$(pwd)" "$identifier" "transcripts.lengthes" "$gene_transcript_map" >> targets_list
 done < $identifiers
-bash $script_path/abund_est.sh
+bash $script_path/abund_est.sh  ## This produce (for gene & isoform) allTissues_TPM, adultOnly_TPM, larva_TPM, larvaOnly_TPM, unexp_TPM, exp_TPM
 ###################
 ## Annotation files (has header)
 # $compAnalysis/uniprot_sprot.blastx.outfmt6.sig.best.exp
@@ -136,21 +165,22 @@ bash $script_path/abund_est.sh
 # ${p_asteroides}/blast_out/trinityVscoral_best.sig
 # ${p_asteroides}/blast_out/recognized_best.sig
 
-## isoforms expressed in larva (569961) & has sig hit against symb. (186670)
-comm -12 <(cat $abundFilter/larva_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVsSymb_best.sig | awk '{print $1}' | sort) > larva_isoformTPM_vs_trinityVsSymb  ## 179948
-comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) larva_isoformTPM_vs_trinityVsSymb > larva_isoformTPM_vs_trinityVsSymb.ann  ## 49900
+cd ${p_asteroides}/blast_out
+## isoforms expressed in larva (568353) & has sig hit against symb. (186177)
+comm -12 <(cat $abundFilter/larva_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVsSymb_best.sig | awk '{print $1}' | sort) > larva_isoformTPM_vs_trinityVsSymb  ## 179515
+comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) larva_isoformTPM_vs_trinityVsSymb > larva_isoformTPM_vs_trinityVsSymb.ann  ## 49780
 
-## isoforms expressed in larva (569961) & has sig hit against coral seq (129902)
-comm -12 <(cat $abundFilter/larva_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVscoral_best.sig | awk '{print $1}' | sort) > larva_isoformTPM_vs_trinityVscoral  ## 126038
-comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) larva_isoformTPM_vs_trinityVscoral > larva_isoformTPM_vs_trinityVscoral.ann  ## 24292
+## isoforms expressed in larva (568353) & has sig hit against coral seq (129746)
+comm -12 <(cat $abundFilter/larva_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVscoral_best.sig | awk '{print $1}' | sort) > larva_isoformTPM_vs_trinityVscoral  ## 125873
+comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) larva_isoformTPM_vs_trinityVscoral > larva_isoformTPM_vs_trinityVscoral.ann  ## 24248
 
-## isoforms expressed in adult only (298944) & has sig hit against symb. (186670)
-comm -12 <(cat $abundFilter/adultOnly_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVsSymb_best.sig | awk '{print $1}' | sort) > adultOnly_isoformTPM_vs_trinityVsSymb  ## 6722
-comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) adultOnly_isoformTPM_vs_trinityVsSymb > adultOnly_isoformTPM_vs_trinityVsSymb.ann  ## 2534
+## isoforms expressed in adult only (298617) & has sig hit against symb. (186177)
+comm -12 <(cat $abundFilter/adultOnly_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVsSymb_best.sig | awk '{print $1}' | sort) > adultOnly_isoformTPM_vs_trinityVsSymb  ## 6615
+comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) adultOnly_isoformTPM_vs_trinityVsSymb > adultOnly_isoformTPM_vs_trinityVsSymb.ann  ## 2518
 
-## isoforms expressed in adult only (298944)  & has sig hit against coral seq (129902)
-comm -12 <(cat $abundFilter/adultOnly_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVscoral_best.sig | awk '{print $1}' | sort) > adultOnly_isoformTPM_vs_trinityVscoral  ## 3864
-comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) adultOnly_isoformTPM_vs_trinityVscoral > adultOnly_isoformTPM_vs_trinityVscoral.ann  ## 1146
+## isoforms expressed in adult only (298617)  & has sig hit against coral seq (129746)
+comm -12 <(cat $abundFilter/adultOnly_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVscoral_best.sig | awk '{print $1}' | sort) > adultOnly_isoformTPM_vs_trinityVscoral  ## 3845
+comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) adultOnly_isoformTPM_vs_trinityVscoral > adultOnly_isoformTPM_vs_trinityVscoral.ann  ## 1136
 
 #####
 cd $abundFilter
@@ -158,137 +188,154 @@ mkdir coral
 cat ${p_asteroides}/blast_out/trinityVscoral_best.sig | awk '{print $1}' > coral_transIDs
 head -n1 transcripts.lengthes > coral/transcripts.lengthes
 grep -w -F -f coral_transIDs transcripts.lengthes >> coral/transcripts.lengthes
-grep -w -F -f coral_transIDs gene_transcript_map > coral/gene_transcript_map
+grep -w -F -f coral_transIDs $gene_transcript_map > coral/gene_transcript_map
 for f in *.quant.counts;do
   head -n1 $f > coral/$f
   grep -w -F -f coral_transIDs $f >> coral/$f
 done
 cd coral
 
-module load R/3.0.1
+#module load R/3.0.1
 while read identifier;do
   echo $(pwd) $identifier
-  Rscript ${script_path}/calcTPM_tis.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
+  bash $script_path/run_calcTPM.sh "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" ${script_path}/calcTPM2.R
+  #Rscript ${script_path}/calcTPM2.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
 done < $identifiers
 bash $script_path/abund_est.sh
 
-Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1); data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2); data3=read.table(args[3], header=F,row.names=NULL,sep="\t");head(data3);ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' $abundFilter/coral/exp_isoformTPM $swiss_ann ${p_asteroides}/blast_out/trinityVscoral_best.sig
-
-filter_fasta.py --input_fasta_fp $univec_ann_exp_tran --output_fasta_fp p_ast2016.fasta --seq_id_fp ../coral_transIDs
+## define the species specific transcriptome and related annotations
+filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp p_ast2016.fasta --seq_id_fp exp_isoformTPM
 p_ast2016_trans=$abundFilter/coral/p_ast2016.fasta
-
-filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp longest_orfs.pep --seq_id_fp ../coral_transIDs
-
-while read gene;do
-  grep -A1 $gene":" $LongOrfs.complete
-done < ../coral_transIDs > longest_orfs.pep.complete  ## 26806
-grep "^>" longest_orfs.pep.complete | awk -F '[>|]' '{print $2"|"$3}' | sort | uniq | wc -l ## 17282
-
+Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
+'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
+'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
+'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ${p_asteroides}/blast_out/trinityVscoral_best.sig
+tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.coral.key
+filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.coral.pep --seq_id_fp LongOrfs.coral.key
+filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.coral.pep.complete --seq_id_fp LongOrfs.coral.key
+grep "^>" LongOrfs.coral.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 17277
 ##############
 cd $abundFilter
 mkdir spC15
-grep "S_spC15.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig | awk '{print $1}' > spC15_transIDs
+grep "S_spC15.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > trinityVsSymb_best.sig.spC15
+cat trinityVsSymb_best.sig.spC15 | awk '{print $1}' > spC15_transIDs
 head -n1 transcripts.lengthes > spC15/transcripts.lengthes
 grep -w -F -f spC15_transIDs transcripts.lengthes >> spC15/transcripts.lengthes
-grep -w -F -f spC15_transIDs gene_transcript_map > spC15/gene_transcript_map
+grep -w -F -f spC15_transIDs $gene_transcript_map > spC15/gene_transcript_map
 for f in *.quant.counts;do
   head -n1 $f > spC15/$f
   grep -w -F -f spC15_transIDs $f >> spC15/$f
 done
 cd spC15
 
-module load R/3.0.1
+#module load R/3.0.1
 while read identifier;do
   echo $(pwd) $identifier
-  Rscript ${script_path}/calcTPM_tis.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
+  bash $script_path/run_calcTPM.sh "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" ${script_path}/calcTPM2.R
+  #Rscript ${script_path}/calcTPM2.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
 done < $identifiers
 bash $script_path/abund_est.sh
 
-
-filter_fasta.py --input_fasta_fp $univec_ann_exp_tran --output_fasta_fp spC15_2016.fasta --seq_id_fp ../spC15_transIDs
+## define the species specific transcriptome and related annotations
+filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp spC15_2016.fasta --seq_id_fp exp_isoformTPM
+spC15_2016_trans=$abundFilter/spC15/spC15_2016.fasta
+Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
+'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
+'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
+'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ../trinityVsSymb_best.sig.spC15
+tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.spC15.key
+filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.spC15.pep --seq_id_fp LongOrfs.spC15.key
+filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.spC15.pep.complete --seq_id_fp LongOrfs.spC15.key
+grep "^>" LongOrfs.spC15.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 20741
 ##############
 cd $abundFilter
 mkdir cladeA
-grep "S_cladeA.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig | awk '{print $1}' > cladeA_transIDs
+grep "S_cladeA.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > trinityVsSymb_best.sig.cladeA
+cat trinityVsSymb_best.sig.cladeA | awk '{print $1}' > cladeA_transIDs
 head -n1 transcripts.lengthes > cladeA/transcripts.lengthes
 grep -w -F -f cladeA_transIDs transcripts.lengthes >> cladeA/transcripts.lengthes
-grep -w -F -f cladeA_transIDs gene_transcript_map > cladeA/gene_transcript_map
+grep -w -F -f cladeA_transIDs $gene_transcript_map > cladeA/gene_transcript_map
 for f in *.quant.counts;do
   head -n1 $f > cladeA/$f
   grep -w -F -f cladeA_transIDs $f >> cladeA/$f
 done
 cd cladeA
 
-module load R/3.0.1
+#module load R/3.0.1
 while read identifier;do
   echo $(pwd) $identifier
-  Rscript ${script_path}/calcTPM_tis.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
+  bash $script_path/run_calcTPM.sh "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" ${script_path}/calcTPM2.R
+  #Rscript ${script_path}/calcTPM2.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
 done < $identifiers
 bash $script_path/abund_est.sh
 
-filter_fasta.py --input_fasta_fp $univec_ann_exp_tran --output_fasta_fp cladeA_2016.fasta --seq_id_fp ../cladeA_transIDs
+## define the species specific transcriptome and related annotations
+filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp cladeA_2016.fasta --seq_id_fp exp_isoformTPM
+cladeA_2016_trans=$abundFilter/cladeA/cladeA_2016.fasta
+Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
+'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
+'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
+'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ../trinityVsSymb_best.sig.cladeA
+tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.cladeA.key
+filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.cladeA.pep --seq_id_fp LongOrfs.cladeA.key
+filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.cladeA.pep.complete --seq_id_fp LongOrfs.cladeA.key
+grep "^>" LongOrfs.cladeA.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 33553
+##############
+cd $abundFilter
+mkdir S_spCCMP2430
+grep "S_spCCMP2430.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > trinityVsSymb_best.sig.S_spCCMP2430
+cat trinityVsSymb_best.sig.S_spCCMP2430 | awk '{print $1}' > S_spCCMP2430_transIDs
+head -n1 transcripts.lengthes > S_spCCMP2430/transcripts.lengthes
+grep -w -F -f S_spCCMP2430_transIDs transcripts.lengthes >> S_spCCMP2430/transcripts.lengthes
+grep -w -F -f S_spCCMP2430_transIDs $gene_transcript_map > S_spCCMP2430/gene_transcript_map
+for f in *.quant.counts;do
+  head -n1 $f > S_spCCMP2430/$f
+  grep -w -F -f S_spCCMP2430_transIDs $f >> S_spCCMP2430/$f
+done
+cd S_spCCMP2430
 
+#module load R/3.0.1
+while read identifier;do
+  echo $(pwd) $identifier
+  bash $script_path/run_calcTPM.sh "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" ${script_path}/calcTPM2.R
+  #Rscript ${script_path}/calcTPM2.R "$(pwd)" "$identifier" "transcripts.lengthes" "gene_transcript_map" >> targets_list
+done < $identifiers
+bash $script_path/abund_est.sh
+
+## define the species specific transcriptome and related annotations
+filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp S_spCCMP2430_2016.fasta --seq_id_fp exp_isoformTPM
+S_spCCMP2430_2016_trans=$abundFilter/S_spCCMP2430/S_spCCMP2430_2016.fasta
+Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
+'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
+'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
+'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ../trinityVsSymb_best.sig.S_spCCMP2430
+tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.S_spCCMP2430.key
+filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.S_spCCMP2430.pep --seq_id_fp LongOrfs.S_spCCMP2430.key
+filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.S_spCCMP2430.pep.complete --seq_id_fp LongOrfs.S_spCCMP2430.key
+grep "^>" LongOrfs.S_spCCMP2430.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 3884
 ##############
 ## Assessement of the transcriptome
 cd $compAnalysis
 module load Bioperl/1.6.923
 perl ${script_path}/seq_stats.pl $p_ast2016_trans > $p_ast2016_trans.MatzStat
+perl ${script_path}/seq_stats.pl $spC15_2016_trans > $spC15_2016_trans.MatzStat
+perl ${script_path}/seq_stats.pl $cladeA_2016_trans > $cladeA_2016_trans.MatzStat
+perl ${script_path}/seq_stats.pl $S_spCCMP2430_2016_trans > $S_spCCMP2430_2016_trans.MatzStat
 
-module load trinity/6.0.2
+module load trinity/2.2.0
 TrinityStats.pl $p_ast2016_trans > $p_ast2016_trans.TrinityStat
-
-## calc the the no of Complete ORFs
-grep "type:complete" $LongOrfs | wc -l  ##225219
-grep -A1 "type:complete" $LongOrfs | grep -v "^--" > $LongOrfs.complete ## 225219
-grep "^>" $LongOrfs.complete | awk -F '[>|]' '{print $2"|"$3}' | sort | uniq | wc -l ## 124271
-while read gene;do grep $gene"|" $LongOrfs; done < <(cat $compAnalysis/unexpIDs $p_asteroides/UniVec/excludeIDs_orig | sort |uniq) > $LongOrfs.exclude
-grep "type:complete" $LongOrfs.exclude | wc -l ## 810
-grep "type:complete" $LongOrfs.exclude > $LongOrfs.exclude.complete ## 810
-grep "^>" $LongOrfs.exclude.complete | awk -F '[>|]' '{print $2"|"$3}' | sort | uniq | wc -l ## 449
-## Total no of complte ORFs (one transcript may have many ORFs): 225219 - 810 = 224409
-## no of uniqe transcripts with complete ORFS: 124271 - 449 = 123822
-
-
-## instaling and running assemblathon2
-#cd ${script_path}
-#git clone https://github.com/ucdavis-bioinformatics/assemblathon2-analysis.git
-#cd assemblathon2-analysis ## you have to be in this folder so that the file can use the FAlite.pm script
-#perl ./assemblathon_stats.pl ${compAnalysis}/Trinity.fasta.clean > ${compAnalysis}/trinity_assemblathon2.stat
-#perl ./assemblathon_stats.pl ${p_asteroides}/data/Porites.Astreoides.uniprot2013.fa > ${p_asteroides}/data/trinity_assemblathon2.stat
-
-## http://deweylab.biostat.wisc.edu/detonate/vignette.html
-#cd $ass_dir
-#module load DETONATE/1.8.1
-#lf="${lf_files[*]}"
-#rt="${rt_files[*]}"
-#rsem-eval-calculate-score --paired-end $(echo ${lf[*]} | tr ' ' ',') $(echo ${rt[*]} | tr ' ' ',') \
-#			  trinity_out_dir/seqclean/Trinity.fasta.clean \
-#			  Trinity.fasta.clean.detonate \
-#			  400 \
-#			  --transcript-length-parameters rsem-eval/true_transcript_length_distribution/mouse.txt \
-#			  -p 16
-
+TrinityStats.pl $spC15_2016_trans > $spC15_2016_trans.TrinityStat
+TrinityStats.pl $cladeA_2016_trans > $cladeA_2016_trans.TrinityStat
+TrinityStats.pl $S_spCCMP2430_2016_trans > $S_spCCMP2430_2016_trans.TrinityStat
 #####################
-## TSA Submission Guide
-## http://www.ncbi.nlm.nih.gov/genbank/tsaguide
-## create ASN file
-## https://www.ncbi.nlm.nih.gov/genbank/tbl2asn2#tbl
-module load tbl2asn/20150331
-mkdir ${p_asteroides}/ASN
-cd ${p_asteroides}/ASN
-## download the template.sbt & assembly.cmt
-cat $univec_ann_exp_tran | awk '{print $1}' > allTrans.fsa
-qsub $script_path/createASN.sh
-##############
-## copy the assemblies to the other server
-cd ${p_asteroides}/ASN
-scp allTrans.fsa tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/NCBI_submission/allTrans.fsa
-scp allTrans.sqn tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/NCBI_submission/allTrans.sqn
-
-scp $p_asteroides/c_abundFilter/coral/p_ast2016.fasta tmansour@loretta.hpcf.upr.edu:/export/home/tmansour/p_ast.assemblies.2016/.
-scp $p_asteroides/c_abundFilter/spC15/spC15_2016.fasta tmansour@loretta.hpcf.upr.edu:/export/home/tmansour/p_ast.assemblies.2016/.
-scp $p_asteroides/c_abundFilter/cladeA/cladeA_2016.fasta tmansour@loretta.hpcf.upr.edu:/export/home/tmansour/p_ast.assemblies.2016/.
-##############
 ## compare the new Assembly with the older assembly
 bash $script_path/compareVSoldTrans.sh
 ##################

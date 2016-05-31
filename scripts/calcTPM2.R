@@ -18,12 +18,15 @@ files <- dir(path=pathToCountFiles,pattern=paste("^", target, ".*quant.counts$",
 print(files)
 data <- readDGE(files)
 head(data$counts)
-rawCounts=rowSums(data$counts)  ## raw counts mapping to transcripts
+dataCounts_sorted=data$counts[order(rownames(data$counts)), ]
+head(dataCounts_sorted)
+rawCounts=rowSums(dataCounts_sorted)  ## raw counts mapping to transcripts
 
 data2=read.table(trans_len, header=T)
-head(data2)
-length=data2$length
-
+data2_sorted=data2[with(data2, order(transcript)), ]
+head(data2_sorted)
+length=data2_sorted$length
+stopifnot(all(rownames(dataCounts_sorted)==data2_sorted$transcript))
 dataSummary=cbind(length,rawCounts)
 head(dataSummary)
 
@@ -34,10 +37,12 @@ dataSummary2=cbind(dataSummary,calcTPM)
 head(dataSummary2)
 
 data3=read.table(gene_transcript_map)
-genes=data3$V1
-stopifnot(all(rownames(dataSummary2)==data3$V2))
-dataSummary3=data.frame(genes,dataSummary2)      ## Add gene names
-#head(dataSummary3)
+data3_sorted= data3[with(data3, order(V2)), ]
+genes=data3_sorted$V1
+dataSummary2_sorted <- dataSummary2[ order(row.names(dataSummary2)), ]
+stopifnot(all(rownames(dataSummary2_sorted)==data3_sorted$V2))
+dataSummary3=data.frame(genes,dataSummary2_sorted)      ## Add gene names
+head(dataSummary3)
 #write.table(dataSummary3, file='dataSummary', sep='\t', quote=F, row.names=T, col.names=NA)
 
 transcripts=rownames(dataSummary3)
@@ -55,15 +60,18 @@ dataSummary5=merge(dataSummary4,sumTPM,by.x="genes",by.y="genes",sort=F)
 dataSummary6=merge(dataSummary5,sumCounts,by.x="genes",by.y="genes",sort=F)
 dataSummary7=merge(dataSummary6,maxLength,by.x="genes",by.y="genes",sort=F)
 
-## calculate the TPM ration per gene for each transcript
+## calculate the TPM ratio per gene for each transcript
 isoformTPM=(dataSummary7$calcTPM/dataSummary7$sumTPM)*100
 isoformTPM[is.nan(isoformTPM)] <- 0
 isoformTPM=format(round(isoformTPM, 3), nsmall = 3)
 dataSummary8=data.frame(dataSummary7,isoformTPM)
 #head(dataSummary8)
-write.table(dataSummary8, file=paste(target, 'dataSummary_comp', sep = "."), sep='\t', quote=F, row.names=T, col.names=NA)
 
-
+if (target == "") { 
+   write.table(dataSummary8, file='dataSummary_comp', sep='\t', quote=F, row.names=T, col.names=NA)
+} else { 
+  write.table(dataSummary8, file=paste(target, 'dataSummary_comp', sep = "."), sep='\t', quote=F, row.names=T, col.names=NA)
+}
 ################################
 #pdf("rawCount-hist-plot.pdf")
 #hist(rawCounts,xlim=c(0, 100), breaks = 10000000)
