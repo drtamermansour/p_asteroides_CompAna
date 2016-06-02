@@ -203,14 +203,14 @@ while read identifier;do
 done < $identifiers
 bash $script_path/abund_est.sh
 
-## define the species specific transcriptome and related annotations
+## define the species specific transcriptome and related annotations 
 filter_fasta.py --input_fasta_fp $FCS_ann_exp_tran --output_fasta_fp p_ast2016.fasta --seq_id_fp exp_isoformTPM
-p_ast2016_trans=$abundFilter/coral/p_ast2016.fasta
+p_ast2016_trans=$abundFilter/coral/p_ast2016.fasta ## This file should be matching to "coral_transcriptome.fasta" but missing few transcripts with TPM=0
 Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
 'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
 'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
-'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
-'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
+'ann_isoExp=merge(data1,data2[,c(1,2,17,11)],by.x="geneName",by.y="qseqid",all.x = TRUE);'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1",all.x = TRUE);'\
 'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ${p_asteroides}/blast_out/trinityVscoral_best.sig
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.coral.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.coral.pep --seq_id_fp LongOrfs.coral.key
@@ -219,8 +219,8 @@ grep "^>" LongOrfs.coral.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq
 ##############
 cd $abundFilter
 mkdir spC15
-grep "S_spC15.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > trinityVsSymb_best.sig.spC15
-cat trinityVsSymb_best.sig.spC15 | awk '{print $1}' > spC15_transIDs
+grep "S_spC15.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > spC15/trinityVsSymb_best.sig.spC15
+cat spC15/trinityVsSymb_best.sig.spC15 | awk '{print $1}' > spC15_transIDs
 head -n1 transcripts.lengthes > spC15/transcripts.lengthes
 grep -w -F -f spC15_transIDs transcripts.lengthes >> spC15/transcripts.lengthes
 grep -w -F -f spC15_transIDs $gene_transcript_map > spC15/gene_transcript_map
@@ -244,9 +244,9 @@ spC15_2016_trans=$abundFilter/spC15/spC15_2016.fasta
 Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
 'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
 'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
-'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
-'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
-'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ../trinityVsSymb_best.sig.spC15
+'ann_isoExp=merge(data1,data2[,c(1,2,17,11)],by.x="geneName",by.y="qseqid",all.x = TRUE);'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1",all.x = TRUE);'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann trinityVsSymb_best.sig.spC15
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.spC15.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.spC15.pep --seq_id_fp LongOrfs.spC15.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.spC15.pep.complete --seq_id_fp LongOrfs.spC15.key
@@ -254,8 +254,8 @@ grep "^>" LongOrfs.spC15.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq
 ##############
 cd $abundFilter
 mkdir cladeA
-grep "S_cladeA.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > trinityVsSymb_best.sig.cladeA
-cat trinityVsSymb_best.sig.cladeA | awk '{print $1}' > cladeA_transIDs
+grep "S_cladeA.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > cladeA/trinityVsSymb_best.sig.cladeA
+cat cladeA/trinityVsSymb_best.sig.cladeA | awk '{print $1}' > cladeA_transIDs
 head -n1 transcripts.lengthes > cladeA/transcripts.lengthes
 grep -w -F -f cladeA_transIDs transcripts.lengthes >> cladeA/transcripts.lengthes
 grep -w -F -f cladeA_transIDs $gene_transcript_map > cladeA/gene_transcript_map
@@ -279,9 +279,9 @@ cladeA_2016_trans=$abundFilter/cladeA/cladeA_2016.fasta
 Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
 'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
 'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
-'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
-'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
-'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ../trinityVsSymb_best.sig.cladeA
+'ann_isoExp=merge(data1,data2[,c(1,2,17,11)],by.x="geneName",by.y="qseqid",all.x = TRUE);'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1",all.x = TRUE);'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann trinityVsSymb_best.sig.cladeA
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.cladeA.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.cladeA.pep --seq_id_fp LongOrfs.cladeA.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.cladeA.pep.complete --seq_id_fp LongOrfs.cladeA.key
@@ -289,8 +289,8 @@ grep "^>" LongOrfs.cladeA.pep.complete | awk -F '[>|]' '{print $2}' | sort | uni
 ##############
 cd $abundFilter
 mkdir S_spCCMP2430
-grep "S_spCCMP2430.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > trinityVsSymb_best.sig.S_spCCMP2430
-cat trinityVsSymb_best.sig.S_spCCMP2430 | awk '{print $1}' > S_spCCMP2430_transIDs
+grep "S_spCCMP2430.est" ${p_asteroides}/blast_out/trinityVsSymb_best.sig > S_spCCMP2430/trinityVsSymb_best.sig.S_spCCMP2430
+cat S_spCCMP2430/trinityVsSymb_best.sig.S_spCCMP2430 | awk '{print $1}' > S_spCCMP2430_transIDs
 head -n1 transcripts.lengthes > S_spCCMP2430/transcripts.lengthes
 grep -w -F -f S_spCCMP2430_transIDs transcripts.lengthes >> S_spCCMP2430/transcripts.lengthes
 grep -w -F -f S_spCCMP2430_transIDs $gene_transcript_map > S_spCCMP2430/gene_transcript_map
@@ -314,9 +314,9 @@ S_spCCMP2430_2016_trans=$abundFilter/S_spCCMP2430/S_spCCMP2430_2016.fasta
 Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.names=NULL);head(data1);'\
 'data2=read.table(args[2], header=T,row.names=NULL,sep="\t",quote="");head(data2);'\
 'data3=read.table(args[3], header=F,row.names=NULL,sep="\t");colnames(data3)[2]="coral_blast_hit";head(data3);'\
-'ann_isoExp=merge(data1,data2[,c(1,2,17)],by.x="geneName",by.y="qseqid");'\
-'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1");'\
-'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann ../trinityVsSymb_best.sig.S_spCCMP2430
+'ann_isoExp=merge(data1,data2[,c(1,2,17,11)],by.x="geneName",by.y="qseqid",all.x = TRUE);'\
+'ann_isoExp2=merge(ann_isoExp,data3[,c(1,2)],by.x="geneName",by.y="V1",all.x = TRUE);'\
+'write.table(ann_isoExp2,"ann_isoExp", sep="\t", quote=F, row.names=F, col.names=T);' exp_isoformTPM $swiss_ann trinityVsSymb_best.sig.S_spCCMP2430
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.S_spCCMP2430.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.S_spCCMP2430.pep --seq_id_fp LongOrfs.S_spCCMP2430.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.S_spCCMP2430.pep.complete --seq_id_fp LongOrfs.S_spCCMP2430.key
@@ -800,7 +800,14 @@ cat ${p_asteroides}/symbTrans/$coral.best | awk '$11 <= 1e-5' > ${p_asteroides}/
 done
 
 
-
+#####################
+#####################
+scp $p_asteroides/compAnalysis/Trinity.clean.201.exp.FCS.fasta tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/. ## final all transcriptome with initial annotation
+scp ${p_asteroides}/blast_out/trinityVsSymb_best.sig.fasta tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/. ## the total zooxanrthellae transcriptome with initial annotation
+scp $abundFilter/coral/{p_ast2016.fasta,ann_isoExp,LongOrfs.coral.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/coral/. ## clean porites asteroids transcriptome with annotation files
+scp $abundFilter/spC15/{spC15_2016.fasta,ann_isoExp,LongOrfs.spC15.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/spC15/. ## clean porites asteroids transcriptome with annotation files
+scp $abundFilter/cladeA/{cladeA_2016.fasta,ann_isoExp,LongOrfs.cladeA.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/cladeA/. ## clean porites asteroids transcriptome with annotation files
+scp $abundFilter/S_spCCMP2430/{S_spCCMP2430_2016.fasta,ann_isoExp,LongOrfs.S_spCCMP2430.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/S_spCCMP2430/. ## clean porites asteroids transcriptome with annotation files
 
 
 
