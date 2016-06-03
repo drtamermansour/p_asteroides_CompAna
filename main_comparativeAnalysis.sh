@@ -336,100 +336,81 @@ TrinityStats.pl $spC15_2016_trans > $spC15_2016_trans.TrinityStat
 TrinityStats.pl $cladeA_2016_trans > $cladeA_2016_trans.TrinityStat
 TrinityStats.pl $S_spCCMP2430_2016_trans > $S_spCCMP2430_2016_trans.TrinityStat
 #####################
-## compare the new Assembly with the older assembly
-bash $script_path/compareVSoldTrans.sh
-##################
 ## blast against the published pastreoids transcriptome
 # a Matz lab paper (http://onlinelibrary.wiley.com/doi/10.1111/mec.12390/abstract)
 # The annotated transcriptome (http://www.bio.utexas.edu/research/matz_lab/matzlab/Data.html).
 # Porites astreoides (adult, Symbiodinium-specific reads excluded)
-cd ${p_asteroides}/resources
-wget https://dl.dropboxusercontent.com/u/37523721/pastreoides_transcriptome_july2014.zip
-mkdir ${p_asteroides}/resources/P_ast.transcriptome
-unzip pastreoides_transcriptome_july2014.zip -d P_ast.transcriptome
-mkdir ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB
-cd ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB
+cd ${p_asteroides}/resources/coral_trans/P_astreoides
+module load Bioperl/1.6.923
+perl ${script_path}/seq_stats.pl past.fasta > past.fasta.MatzStat
+
+mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
+cd ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
 cp ../past.fasta .
 module load BLAST+/2.2.30
 makeblastdb -in past.fasta -input_type fasta -dbtype nucl
-blastn -query ${p_asteroides}/blast_out/unrecognizied_est.fasta \
+blastn -query $p_ast2016_trans \
        -db past.fasta \
        -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
        -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
-       -max_target_seqs 10  -out unrecogniziedVspublishedAss ## -perc_identity 90 -qcov_hsp_perc 50
-sort -k1,1 -k12,12nr -k11,11n unrecogniziedVspublishedAss | sort -u -k1,1 --merge > unrecogniziedVspublishedAss_best
-wc -l unrecogniziedVspublishedAss_best ## 153020  (out of 809187)
-cat unrecogniziedVspublishedAss_best | awk '$11 <= 1e-5' | wc -l        ##  153020
-
-module load QIIME/1.8.0  ## it might be better to start new screen to avoid module conflict on HPC
-filter_fasta.py --input_fasta_fp ${p_asteroides}/blast_out/unrecognizied_est.fasta --output_fasta_fp ${p_asteroides}/blast_out/recog.uncontaminated2.fasta --seq_id_fp unrecogniziedVspublishedAss_best
-
-filter_fasta.py --input_fasta_fp ${p_asteroides}/blast_out/unrecognizied_est.fasta --output_fasta_fp ${p_asteroides}/blast_out/unrecognizied_est2.fasta --seq_id_fp unrecogniziedVspublishedAss_best --negate
-
-cd ${p_asteroides}/blast_out/
-cat recog.uncontaminated.fasta recog.uncontaminated2.fasta > recog.uncontaminated.total.fasta
-mkdir HiconfTrans.total_BlastDB && cd HiconfTrans.total_BlastDB
-cp ../recog.uncontaminated.total.fasta .
+       -max_target_seqs 20  -out p_ast2016VsMatz2013 ## -perc_identity 90 -qcov_hsp_perc 50
+sort -k1,1 -k12,12nr -k11,11n p_ast2016VsMatz2013 | sort -u -k1,1 --merge > p_ast2016VsMatz2013_best
+wc -l p_ast2016VsMatz2013_best ## 82384  (out of 129718)
+cat p_ast2016VsMatz2013_best | awk '$11 <= 1e-5' | wc -l        ##  82384
+cat p_ast2016VsMatz2013 | awk -F'\t' '{print $2}' | sort | uniq | wc -l  ## 22212
+cat p_ast2016VsMatz2013_best | awk -F'\t' '{print $2}' | sort | uniq | wc -l ## 18944
+ 
+mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/newAsm.BlastDB
+cd ${p_asteroides}/resources/coral_trans/P_astreoides/newAsm.BlastDB
+cp $p_ast2016_trans p_ast2016.fasta
 module load BLAST+/2.2.30
-makeblastdb -in recog.uncontaminated.total.fasta -input_type fasta -dbtype nucl
-
-####################
-grep "^>" ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta | wc -l ## 30740
-
-cd ${p_asteroides}/blast_out/HiconfTrans_BlastDB/
-blastn -query ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta \
-       -db recog.uncontaminated.fasta \
+makeblastdb -in p_ast2016.fasta -input_type fasta -dbtype nucl
+blastn -query ../past.fasta \
+       -db p_ast2016.fasta \
        -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
        -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
-       -max_target_seqs 10  -out publishedAssVsrecog ## -perc_identity 90 -qcov_hsp_perc 50
-sort -k1,1 -k12,12nr -k11,11n  publishedAssVsrecog | sort -u -k1,1 --merge > publishedAssVsrecog_best 
-wc -l publishedAssVsrecog_best ## 16503 (out of 30740)
-cat publishedAssVsrecog_best | awk '$11 <= 1e-5' | wc -l        ## 16503 
+       -max_target_seqs 20  -out Matz2013Vsp_ast2016 ## -perc_identity 90 -qcov_hsp_perc 50
+sort -k1,1 -k12,12nr -k11,11n Matz2013Vsp_ast2016 | sort -u -k1,1 --merge > Matz2013Vsp_ast2016_best
+wc -l Matz2013Vsp_ast2016_best ## 22204  (out of 30740)
+cat Matz2013Vsp_ast2016_best | awk '$11 <= 1e-5' | wc -l        ##  22204
+cat Matz2013Vsp_ast2016 | awk -F'\t' '{print $2}' | sort | uniq | wc -l  ## 69154
+cat Matz2013Vsp_ast2016_best | awk -F'\t' '{print $2}' | sort | uniq | wc -l ## 17477
 
+mkdir ${p_asteroides}/compAsm
+cd ${p_asteroides}/compAsm
+cp $p_ast2016_trans p_ast2016.fasta
+cp ${p_asteroides}/resources/coral_trans/P_astreoides/past.fasta matz2013.fasta
+python ${script_path}/blast_rbh.py -a nucl -t blastn -o RBH p_ast2016.fasta matz2013.fasta
+cat RBH | awk '$3 > $4' > oldAssVsnewAss_best_better
+wc -l oldAssVsnewAss_best_better ## 1382
+cat RBH | awk '$3 == $4' > oldAssVsnewAss_best_equal
+wc -l oldAssVsnewAss_best_equal ## 6
+cat RBH | awk '$3 < $4' > oldAssVsnewAss_best_less
+wc -l oldAssVsnewAss_best_less ## 1085
+cat oldAssVsnewAss_best_better | awk '{ sum+=$4} END {print sum}' ## 824062
+cat oldAssVsnewAss_best_better | awk '{ sum+=$3} END {print sum}' ## 1164786 (i.e. difference of 340724 =~0.34Mb)
+cat oldAssVsnewAss_best_less | awk '{ sum+=$4} END {print sum}' ## 639843
+cat oldAssVsnewAss_best_less | awk '{ sum+=$3} END {print sum}' ## 484854 (i.e. difference of 154989 =~0.15Mb)
 
-cd ${p_asteroides}/blast_out/HiconfTrans.total_BlastDB/
-blastn -query ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta \
-       -db recog.uncontaminated.total.fasta \
-       -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
-       -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
-       -max_target_seqs 10  -out publishedAssVsrecog.total ## -perc_identity 90 -qcov_hsp_perc 50
-sort -k1,1 -k12,12nr -k11,11n  publishedAssVsrecog.total | sort -u -k1,1 --merge > publishedAssVsrecog.total_best 
-wc -l publishedAssVsrecog.total_best ## 29929 (out of 30740)
-cat publishedAssVsrecog.total_best | awk '$11 <= 1e-5' | wc -l        ## 29929 
+module load transrate/1.0.1
+transrate --assembly p_ast2016.fasta,matz2013.fasta --output transrate_results &> trans.log
+transrate --assembly matz2013.fasta --reference p_ast2016.fasta --output matz2013VSp_ast2016_transrate &> matz2013VSp_ast2016_trans.log
 
-cat publishedAssVsrecog.total_best | awk '$13 < $14' > publishedAssVsrecog.total_best_better        
-wc -l publishedAssVsrecog.total_best_better ## 27564
-cat publishedAssVsrecog.total_best | awk '$13 == $14' > publishedAssVsrecog.total_best_equal        
-wc -l publishedAssVsrecog.total_best_equal ## 7
-cat publishedAssVsrecog.total_best | awk '$13 > $14' > publishedAssVsrecog.total_best_less        
-wc -l publishedAssVsrecog.total_best_less ## 2354
-cat publishedAssVsrecog.total_best_better | awk '{ sum+=$14} END {print sum}' ## 92886988
-cat publishedAssVsrecog.total_best_better | awk '{ sum+=$13} END {print sum}' ## 14688495 (i.e. difference of 78198493 =~78Mb)
-cat publishedAssVsrecog.total_best_less | awk '{ sum+=$14} END {print sum}' ## 1300368
-cat publishedAssVsrecog.total_best_less | awk '{ sum+=$13} END {print sum}' ## 1888017 (i.e. difference of 587649 =~0.6Mb)
-
-module load QIIME/1.8.0  ## it might be better to start new screen to avoid module conflict on HPC
-filter_fasta.py --input_fasta_fp ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta --output_fasta_fp publishedunrecognizied_est.fasta --seq_id_fp publishedAssVsrecog.total_best --negate
-
-module load Bioperl/1.6.923
-perl ${script_path}/seq_stats.pl recog.uncontaminated.total.fasta >  recog.uncontaminated.total.fasta.MatzStat
-perl ${script_path}/seq_stats.pl ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta > ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta.MatzStat
-
-module load trinity/6.0.2
-TrinityStats.pl recog.uncontaminated.total.fasta > recog.uncontaminated.total.fasta.TrinityStat
-
-#cd ${p_asteroides}/blast_out/uncontaminated_BlastDB/
-#blastn -query ${p_asteroides}/resources/P_ast.transcriptome/P_ast.BlastDB/past.fasta \
-#       -db uncontaminated.fasta \
-#       -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
-#       -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
-#       -max_target_seqs 10  -out publishedAssVsuncontaminated ## -perc_identity 90 -qcov_hsp_perc 50
-#sort -k1,1 -k12,12nr -k11,11n  publishedAssVsuncontaminated | sort -u -k1,1 --merge > publishedAssVsuncontaminated_best 
-#wc -l publishedAssVsuncontaminated_best ## 29932 (out of 30740)
-
-
-
-##############
+awk -F',' 'BEGIN{OFS=",";} {if($10=="true")print $1,$2,$11,$12;}' matz2013VSp_ast2016_transrate/matz2013/contigs.csv | sort -t "," -k 4b,4 > CRBB_hits.csv
+tail -n+2 transrate_results/p_ast2016/contigs.csv | awk -F',' 'BEGIN{OFS=",";} {print $1,$2;}' | sort -t "," -k 1b,1 > p_ast2016_len.csv
+echo "qname qlen rcoverage rname rlen" > CRBB_withReflen
+join -1 4 -2 1 -t "," CRBB_hits.csv p_ast2016_len.csv | awk -F',' '{print $2,$3,$4,$1,$5;}' >> CRBB_withReflen
+cat CRBB_withReflen | awk '$5 > $2' > CRBB_oldAssVsnewAss_best_better
+wc -l CRBB_oldAssVsnewAss_best_better ## 15115
+cat CRBB_withReflen | awk '$5 == $2' > CRBB_oldAssVsnewAss_best_equal
+wc -l CRBB_oldAssVsnewAss_best_equal ## 14
+cat CRBB_withReflen | awk '$5 < $2' > CRBB_oldAssVsnewAss_best_less
+wc -l CRBB_oldAssVsnewAss_best_less ## 6104
+cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$5} END {print sum}' ## 36863704
+cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$2} END {print sum}' ## 7022034 (i.e. difference of 29841670 =~29.5Mb)
+cat CRBB_oldAssVsnewAss_best_less | awk '{ sum+=$5} END {print sum}' ## 2539349
+cat CRBB_oldAssVsnewAss_best_less | awk '{ sum+=$2} END {print sum}' ## 5032274 (i.e. difference of 2492925 =~2.5Mb)
+#####################
 ## blast unrecog transcripts aganist NCBI nuclutide database
 module load BLAST+/2.2.30
 cd $p_asteroides/resources
