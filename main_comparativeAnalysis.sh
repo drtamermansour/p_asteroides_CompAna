@@ -395,21 +395,30 @@ cat oldAssVsnewAss_best_less | awk '{ sum+=$3} END {print sum}' ## 484854 (i.e. 
 module load transrate/1.0.1
 transrate --assembly p_ast2016.fasta,matz2013.fasta --output transrate_results &> trans.log
 transrate --assembly matz2013.fasta --reference p_ast2016.fasta --output matz2013VSp_ast2016_transrate &> matz2013VSp_ast2016_trans.log
-
 awk -F',' 'BEGIN{OFS=",";} {if($10=="true")print $1,$2,$11,$12;}' matz2013VSp_ast2016_transrate/matz2013/contigs.csv | sort -t "," -k 4b,4 > CRBB_hits.csv
 tail -n+2 transrate_results/p_ast2016/contigs.csv | awk -F',' 'BEGIN{OFS=",";} {print $1,$2;}' | sort -t "," -k 1b,1 > p_ast2016_len.csv
 echo "qname qlen rcoverage rname rlen" > CRBB_withReflen
 join -1 4 -2 1 -t "," CRBB_hits.csv p_ast2016_len.csv | awk -F',' '{print $2,$3,$4,$1,$5;}' >> CRBB_withReflen
 cat CRBB_withReflen | awk '$5 > $2' > CRBB_oldAssVsnewAss_best_better
-wc -l CRBB_oldAssVsnewAss_best_better ## 15115
+better=$(cat CRBB_oldAssVsnewAss_best_better | wc -l) ## 15115
 cat CRBB_withReflen | awk '$5 == $2' > CRBB_oldAssVsnewAss_best_equal
-wc -l CRBB_oldAssVsnewAss_best_equal ## 14
+equal=$(cat CRBB_oldAssVsnewAss_best_equal | wc -l) ## 14
 cat CRBB_withReflen | awk '$5 < $2' > CRBB_oldAssVsnewAss_best_less
-wc -l CRBB_oldAssVsnewAss_best_less ## 6104
-cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$5} END {print sum}' ## 36863704
-cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$2} END {print sum}' ## 7022034 (i.e. difference of 29841670 =~29.5Mb)
-cat CRBB_oldAssVsnewAss_best_less | awk '{ sum+=$5} END {print sum}' ## 2539349
-cat CRBB_oldAssVsnewAss_best_less | awk '{ sum+=$2} END {print sum}' ## 5032274 (i.e. difference of 2492925 =~2.5Mb)
+less=$(cat CRBB_oldAssVsnewAss_best_less | wc -l) ## 6104
+newBetter=$(cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$5} END {print sum}') ## 36863704
+oldBetter=$(cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$2} END {print sum}') ## 7022034 (i.e. difference of 29841670 =~29.5Mb)
+newLess=$(cat CRBB_oldAssVsnewAss_best_less | awk '{ sum+=$5} END {print sum}') ## 2539349
+oldLess=$(cat CRBB_oldAssVsnewAss_best_less | awk '{ sum+=$2} END {print sum}') ## 5032274 (i.e. difference of 2492925 =~2.5Mb)
+cat trans.log matz2013VSp_ast2016_trans.log > compAsm.log ## edit manually to remove reduandancy
+echo "no of transcripts that gain length in the new assembly = $better transcript" >> compAsm.log
+echo "total length of longer transcripts in the new assembly = $newBetter bp" >> compAsm.log
+echo "total gain of length = $(($newBetter-$oldBetter)) bp" >> compAsm.log
+echo "=============================================" >> compAsm.log
+echo "no of transcripts that did not change = $equal transcript" >> compAsm.log
+echo "=============================================" >> compAsm.log
+echo "no of transcripts that lost length in the new assembly = $less transcript" >> compAsm.log
+echo "total length of shorter transcripts in the new assembly = $newLess bp" >> compAsm.log
+echo "total loss of length = $(($oldLess-$newLess)) bp" >> compAsm.log
 #####################
 ## blast unrecog transcripts aganist NCBI nuclutide database
 module load BLAST+/2.2.30
