@@ -19,6 +19,7 @@ sed 's/^>/>A_digitifera.est./' A_digit.est.fasta > $coral_trans/A_digit.est.fast
 ## Acropora millepora (larva and adult) initally publised by Moya Mol Ecol 2012, 21: 2440
 ## http://onlinelibrary.wiley.com/doi/10.1111/j.1365-294X.2012.05554.x/abstract
 ## The download is avialble from Matz lab who re-annotated the transcriptome
+## The new download links can be obtained from: http://www.bio.utexas.edu/research/matz_lab/matzlab/Data.html
 mkdir ${p_asteroides}/resources/coral_trans/A_millepora
 cd ${p_asteroides}/resources/coral_trans/A_millepora
 wget https://www.dropbox.com/s/w5nb1siz7uu7v5b/Amillepora_transcriptome_July2014.zip
