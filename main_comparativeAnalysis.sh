@@ -49,7 +49,6 @@ noSymb_transcriptome=${p_asteroides}/blast_out/noSymb.fasta
 #filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp $LongOrfs.trinityVsSymb.complete --seq_id_fp LongOrfs.trinityVsSymb.key
 #cat trinityVsSymb_best.sig | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.trinityVsSymb
 ######################################
-
 cd ${p_asteroides}/resources/coral_trans
 makeblastdb -in coral_trans.fasta -input_type fasta -dbtype nucl
 blastn -query $noSymb_transcriptome \
@@ -121,7 +120,7 @@ recognized_transcriptome=${p_asteroides}/blast_out/recognized.fasta
 #cat $swiss_ann.trinityVscoralTrans $swiss_ann.trinityVscoralGenomic > $swiss_ann.trinityVscoral
 #cat $swiss_ann.trinityVsSymb $swiss_ann.trinityVscoral > $swiss_ann.recognized
 ##################
-## Abundance estimation
+## Abundance estimation (This general expression is not used anymore)
 cd $compAnalysis
 qsub -v index="salmon_index",transcriptome="$FCS_ann_exp_tran" ${script_path}/salmonIndex.sh
 
@@ -149,22 +148,8 @@ while read identifier;do
   #Rscript ${script_path}/calcTPM2.R "$(pwd)" "$identifier" "transcripts.lengthes" "$gene_transcript_map" >> targets_list
 done < $identifiers
 bash $script_path/abund_est.sh  ## This produce (for gene & isoform) allTissues_TPM, adultOnly_TPM, larva_TPM, larvaOnly_TPM, unexp_TPM, exp_TPM
-###################
-## Annotation files (has header)
-# $compAnalysis/uniprot_sprot.blastx.outfmt6.sig.best.exp
 
-## TPM (adult or larva specific) (has header)
-# $p_asteroides/c_abundFilter/larva_isoformTPM
-# $p_asteroides/c_abundFilter/adultOnly_isoformTPM
-# $p_asteroides/c_abundFilter/larvaOnly_isoformTPM
-# $p_asteroides/c_abundFilter/unexp_isoformTPM
-# $p_asteroides/c_abundFilter/exp_isoformTPM
-
-## hits in symb or coral
-# ${p_asteroides}/blast_out/trinityVsSymb_best.sig
-# ${p_asteroides}/blast_out/trinityVscoral_best.sig
-# ${p_asteroides}/blast_out/recognized_best.sig
-
+## expression stastics 
 cd ${p_asteroides}/blast_out
 ## isoforms expressed in larva (568353) & has sig hit against symb. (186177)
 comm -12 <(cat $abundFilter/larva_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVsSymb_best.sig | awk '{print $1}' | sort) > larva_isoformTPM_vs_trinityVsSymb  ## 179515
@@ -181,8 +166,8 @@ comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) adultOnly_isofor
 ## isoforms expressed in adult only (298617)  & has sig hit against coral seq (129746)
 comm -12 <(cat $abundFilter/adultOnly_isoformTPM | tail -n+2 | awk '{print $1}' |sort) <(cat $p_asteroides/blast_out/trinityVscoral_best.sig | awk '{print $1}' | sort) > adultOnly_isoformTPM_vs_trinityVscoral  ## 3845
 comm -12 <(cat $swiss_ann | tail -n+2 | awk '{print $1}' |sort) adultOnly_isoformTPM_vs_trinityVscoral > adultOnly_isoformTPM_vs_trinityVscoral.ann  ## 1136
-
 #####
+## strain specific transcriptome abundance and annotation
 cd $abundFilter
 mkdir coral
 cat ${p_asteroides}/blast_out/trinityVscoral_best.sig | awk '{print $1}' > coral_transIDs
@@ -344,53 +329,53 @@ cd ${p_asteroides}/resources/coral_trans/P_astreoides
 module load Bioperl/1.6.923
 perl ${script_path}/seq_stats.pl past.fasta > past.fasta.MatzStat
 
-mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
-cd ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
-cp ../past.fasta .
-module load BLAST+/2.2.30
-makeblastdb -in past.fasta -input_type fasta -dbtype nucl
-blastn -query $p_ast2016_trans \
-       -db past.fasta \
-       -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
-       -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
-       -max_target_seqs 20  -out p_ast2016VsMatz2013 ## -perc_identity 90 -qcov_hsp_perc 50
-sort -k1,1 -k12,12nr -k11,11n p_ast2016VsMatz2013 | sort -u -k1,1 --merge > p_ast2016VsMatz2013_best
-wc -l p_ast2016VsMatz2013_best ## 82384  (out of 129718)
-cat p_ast2016VsMatz2013_best | awk '$11 <= 1e-5' | wc -l        ##  82384
-cat p_ast2016VsMatz2013 | awk -F'\t' '{print $2}' | sort | uniq | wc -l  ## 22212
-cat p_ast2016VsMatz2013_best | awk -F'\t' '{print $2}' | sort | uniq | wc -l ## 18944
+#mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
+#cd ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
+#cp ../past.fasta .
+#module load BLAST+/2.2.30
+#makeblastdb -in past.fasta -input_type fasta -dbtype nucl
+#blastn -query $p_ast2016_trans \
+#       -db past.fasta \
+#       -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
+#       -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
+#       -max_target_seqs 20  -out p_ast2016VsMatz2013 ## -perc_identity 90 -qcov_hsp_perc 50
+#sort -k1,1 -k12,12nr -k11,11n p_ast2016VsMatz2013 | sort -u -k1,1 --merge > p_ast2016VsMatz2013_best
+#wc -l p_ast2016VsMatz2013_best ## 82384  (out of 129718)
+#cat p_ast2016VsMatz2013_best | awk '$11 <= 1e-5' | wc -l        ##  82384
+#cat p_ast2016VsMatz2013 | awk -F'\t' '{print $2}' | sort | uniq | wc -l  ## 22212
+#cat p_ast2016VsMatz2013_best | awk -F'\t' '{print $2}' | sort | uniq | wc -l ## 18944
  
-mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/newAsm.BlastDB
-cd ${p_asteroides}/resources/coral_trans/P_astreoides/newAsm.BlastDB
-cp $p_ast2016_trans p_ast2016.fasta
-module load BLAST+/2.2.30
-makeblastdb -in p_ast2016.fasta -input_type fasta -dbtype nucl
-blastn -query ../past.fasta \
-       -db p_ast2016.fasta \
-       -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
-       -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
-       -max_target_seqs 20  -out Matz2013Vsp_ast2016 ## -perc_identity 90 -qcov_hsp_perc 50
-sort -k1,1 -k12,12nr -k11,11n Matz2013Vsp_ast2016 | sort -u -k1,1 --merge > Matz2013Vsp_ast2016_best
-wc -l Matz2013Vsp_ast2016_best ## 22204  (out of 30740)
-cat Matz2013Vsp_ast2016_best | awk '$11 <= 1e-5' | wc -l        ##  22204
-cat Matz2013Vsp_ast2016 | awk -F'\t' '{print $2}' | sort | uniq | wc -l  ## 69154
-cat Matz2013Vsp_ast2016_best | awk -F'\t' '{print $2}' | sort | uniq | wc -l ## 17477
+#mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/newAsm.BlastDB
+#cd ${p_asteroides}/resources/coral_trans/P_astreoides/newAsm.BlastDB
+#cp $p_ast2016_trans p_ast2016.fasta
+#module load BLAST+/2.2.30
+#makeblastdb -in p_ast2016.fasta -input_type fasta -dbtype nucl
+#blastn -query ../past.fasta \
+#       -db p_ast2016.fasta \
+#       -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp" \
+#       -dust 'yes' -best_hit_overhang 0.25 -best_hit_score_edge 0.25 -evalue 1e-5 \
+#       -max_target_seqs 20  -out Matz2013Vsp_ast2016 ## -perc_identity 90 -qcov_hsp_perc 50
+#sort -k1,1 -k12,12nr -k11,11n Matz2013Vsp_ast2016 | sort -u -k1,1 --merge > Matz2013Vsp_ast2016_best
+#wc -l Matz2013Vsp_ast2016_best ## 22204  (out of 30740)
+#cat Matz2013Vsp_ast2016_best | awk '$11 <= 1e-5' | wc -l        ##  22204
+#cat Matz2013Vsp_ast2016 | awk -F'\t' '{print $2}' | sort | uniq | wc -l  ## 69154
+#cat Matz2013Vsp_ast2016_best | awk -F'\t' '{print $2}' | sort | uniq | wc -l ## 17477
 
 mkdir ${p_asteroides}/compAsm
 cd ${p_asteroides}/compAsm
 cp $p_ast2016_trans p_ast2016.fasta
 cp ${p_asteroides}/resources/coral_trans/P_astreoides/past.fasta matz2013.fasta
-python ${script_path}/blast_rbh.py -a nucl -t blastn -o RBH p_ast2016.fasta matz2013.fasta
-cat RBH | awk '$3 > $4' > oldAssVsnewAss_best_better
-wc -l oldAssVsnewAss_best_better ## 1382
-cat RBH | awk '$3 == $4' > oldAssVsnewAss_best_equal
-wc -l oldAssVsnewAss_best_equal ## 6
-cat RBH | awk '$3 < $4' > oldAssVsnewAss_best_less
-wc -l oldAssVsnewAss_best_less ## 1085
-cat oldAssVsnewAss_best_better | awk '{ sum+=$4} END {print sum}' ## 824062
-cat oldAssVsnewAss_best_better | awk '{ sum+=$3} END {print sum}' ## 1164786 (i.e. difference of 340724 =~0.34Mb)
-cat oldAssVsnewAss_best_less | awk '{ sum+=$4} END {print sum}' ## 639843
-cat oldAssVsnewAss_best_less | awk '{ sum+=$3} END {print sum}' ## 484854 (i.e. difference of 154989 =~0.15Mb)
+#python ${script_path}/blast_rbh.py -a nucl -t blastn -o RBH p_ast2016.fasta matz2013.fasta
+#cat RBH | awk '$3 > $4' > oldAssVsnewAss_best_better
+#wc -l oldAssVsnewAss_best_better ## 1382
+#cat RBH | awk '$3 == $4' > oldAssVsnewAss_best_equal
+#wc -l oldAssVsnewAss_best_equal ## 6
+#cat RBH | awk '$3 < $4' > oldAssVsnewAss_best_less
+#wc -l oldAssVsnewAss_best_less ## 1085
+#cat oldAssVsnewAss_best_better | awk '{ sum+=$4} END {print sum}' ## 824062
+#cat oldAssVsnewAss_best_better | awk '{ sum+=$3} END {print sum}' ## 1164786 (i.e. difference of 340724 =~0.34Mb)
+#cat oldAssVsnewAss_best_less | awk '{ sum+=$4} END {print sum}' ## 639843
+#cat oldAssVsnewAss_best_less | awk '{ sum+=$3} END {print sum}' ## 484854 (i.e. difference of 154989 =~0.15Mb)
 
 module load transrate/1.0.1
 transrate --assembly p_ast2016.fasta,matz2013.fasta --output transrate_results &> trans.log
@@ -420,6 +405,15 @@ echo "no of transcripts that lost length in the new assembly = $less transcript"
 echo "total length of shorter transcripts in the new assembly = $newLess bp" >> compAsm.log
 echo "total loss of length = $(($oldLess-$newLess)) bp" >> compAsm.log
 #####################
+scp $p_asteroides/compAnalysis/Trinity.clean.201.exp.FCS.fasta tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/. ## final all transcriptome with initial annotation
+scp ${p_asteroides}/blast_out/trinityVsSymb_best.sig.fasta tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/. ## the total zooxanrthellae transcriptome with initial annotation
+scp $abundFilter/coral/{p_ast2016.fasta,ann_isoExp,LongOrfs.coral.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/coral/. ## clean porites asteroids transcriptome with annotation files
+scp $abundFilter/spC15/{spC15_2016.fasta,ann_isoExp,LongOrfs.spC15.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/spC15/. ## clean porites asteroids transcriptome with annotation files
+scp $abundFilter/cladeA/{cladeA_2016.fasta,ann_isoExp,LongOrfs.cladeA.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/cladeA/. ## clean porites asteroids transcriptome with annotation files
+scp $abundFilter/S_spCCMP2430/{S_spCCMP2430_2016.fasta,ann_isoExp,LongOrfs.S_spCCMP2430.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/S_spCCMP2430/. ## clean porites asteroids transcriptome with annotation files
+#####################
+#####################
+## Temp code
 ## blast unrecog transcripts aganist NCBI nuclutide database
 module load BLAST+/2.2.30
 cd $p_asteroides/resources
@@ -583,7 +577,6 @@ cat unrecognizied.bx_best | awk '$11 <= 1e-3' >  unrecognizied.bx_best_sig
 
 wc -l unrecognizied.bx_best_sig ##
 cat unrecognizied.bx_best_sig | awk -F $'\t' '{A[$20]++}END{for(i in A)print i,A[i]}' | sort -k2,2nr > taxids.bx.sig.count
-
 ################
 cd $p_asteroides/resources
 mkdir uniprot_DB && cd uniprot_DB
@@ -594,20 +587,13 @@ makeblastdb -in uniprot_sprot.fasta -parse_seqids -dbtype prot
 blastx -query $f -db ${p_asteroides}/resources/uniprot_DB/uniprot_sprot.fasta -evalue 0.0001 \
        -num_threads 4 -max_target_seqs 4 -out $f.br \
        -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp stitle salltitles staxids sskingdoms sscinames"
-
 ################
 grep "^>" transcriptome.fa.annot | wc -l
 grep "h=" transcriptome.fa.annot | wc -l
 grep "ortho:" transcriptome.fa.annot | wc -l
 grep "transcript family ortho to:" transcriptome.fa.annot | wc -l
 grep "transcript family homol to:" transcriptome.fa.annot | wc -l
-
-###############
-cat $f | awk '$2 < 100'
-
-
 #############
-
 source env/bin/activate
 cd khmer
 p_asteroides=$"/mnt/lustre_scratch_2012/Tamer/p_asteroides"
@@ -617,17 +603,12 @@ trimmed_data=${p_asteroides}/b_adap_remove
 exp_transcriptome=${p_asteroides}/b_diginormC25k20_2/trinity_out_dir/seqclean/Trinity.fasta.clean.201
 compAnalysis=$"/mnt/lustre_scratch_2012/Tamer/p_asteroides/b_diginormC25k20_2/trinity_out_dir/seqclean"
 #############
-
 ##R
 #setwd("/Users/drtamermansour/Desktop/FileZilla_client/p_asteroides/histograms")
 #data = read.table("allsamples.keep.hist", header=FALSE)
 #plot(data$V1,log(data$V2), xlim=range(0,10000))
 #plot(data$V1,data$V2, log = "xy", type="p", xlab="Kmer multiplicity" , ylab="Frequency of appearance", cex=1, lwd=1)
 #plot(data$V1,data$V2, log = "xy", type="p", xlab="Kmer multiplicity" , ylab="Frequency of appearance", cex=1, lwd=1, xlim=range(1,100), ylim=range(1e+05,1e+10))
-
-
-
-
 #########################################################################################################
 ## blast unrecog transcripts aganist NCBI est  database
 module load BLAST+/2.2.30
@@ -706,7 +687,6 @@ cat recog2.est_best_sig | awk -F $'\t' '{A[$22]++}END{for(i in A)print i,"\t",A[
 cat recog2.est_best_sig | awk -F $'\t' '{A[$21]++}END{for(i in A)print i,A[i]}' | sort -k2,2nr > kingdom.rec2_est.count
 ##
 cd ${p_asteroides}/blast_out/matz
-
 # blasting all chunks to est database
 for f in subset*6_*.fasta; do blastn -query $f -db est_others -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen sstrand qcovs qcovhsp stitle salltitles staxids sskingdoms sscinames" -dust 'yes' -num_threads 4 -max_target_seqs 10 -out $f.est; done
 cat subset*.fasta.est > matz.est
@@ -724,8 +704,6 @@ R CMD BATCH ${script_path}/mergetaxids2.R
 ###
 grep -w "7227" unrec_chunks/unrecognizied.br_best.unrec_sig > Drosophila.unrec_nt
 grep -w "7227" unrec_chunks_unrec/unrecognizied.est_best_sig > Drosophila.unrec_est
-
-
 ###
 recog.br_best_sig
 unrecognizied.br_best.rec_sig
@@ -751,7 +729,6 @@ unrecognizied.est_best_sig
 symp.est_best_sig
 matz.est_best_sig
 
-
 d1=read.table("rec1_chunks/taxids.rec_est.count")
 colnames(d1)=c("taxids","rec1")
 d2=read.table("unrec_chunks_rec/taxids.rec2_est.count")
@@ -762,7 +739,6 @@ d4=read.table("symp/taxids.symp_est.count")
 colnames(d4)=c("taxids","symp")
 d5=read.table("matz/taxids.matz_est.count")
 colnames(d5)=c("taxids","matz")
-
 ####################
 cd ${p_asteroides}/resources
 for coral in "A_millepora" "A_tenuis" "A_hyacinthus" "A_digitifera" "N_vectensis" "H.vulgaris";do cd ${p_asteroides}/resources/$coral; ref=$(find . -name "*.fasta"); echo $ref; makeblastdb -in $ref -input_type fasta -dbtype nucl;done
@@ -781,24 +757,7 @@ blastn -query ${p_asteroides}/symbTrans/symb.fasta \
    -max_target_seqs 10  -out ${p_asteroides}/symbTrans/$coral ## -perc_identity 90 -qcov_hsp_perc 50
 done
 
-
 for coral in "A_millepora" "A_tenuis" "A_hyacinthus" "A_digitifera" "N_vectensis" "H.vulgaris";do
-
 sort -k1,1 -k11,11g ${p_asteroides}/symbTrans/$coral | sort -u -k1,1 --merge > ${p_asteroides}/symbTrans/$coral.best
 cat ${p_asteroides}/symbTrans/$coral.best | awk '$11 <= 1e-5' > ${p_asteroides}/symbTrans/$coral.best.sig
-
 done
-
-
-#####################
-#####################
-scp $p_asteroides/compAnalysis/Trinity.clean.201.exp.FCS.fasta tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/. ## final all transcriptome with initial annotation
-scp ${p_asteroides}/blast_out/trinityVsSymb_best.sig.fasta tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/. ## the total zooxanrthellae transcriptome with initial annotation
-scp $abundFilter/coral/{p_ast2016.fasta,ann_isoExp,LongOrfs.coral.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/coral/. ## clean porites asteroids transcriptome with annotation files
-scp $abundFilter/spC15/{spC15_2016.fasta,ann_isoExp,LongOrfs.spC15.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/spC15/. ## clean porites asteroids transcriptome with annotation files
-scp $abundFilter/cladeA/{cladeA_2016.fasta,ann_isoExp,LongOrfs.cladeA.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/cladeA/. ## clean porites asteroids transcriptome with annotation files
-scp $abundFilter/S_spCCMP2430/{S_spCCMP2430_2016.fasta,ann_isoExp,LongOrfs.S_spCCMP2430.key,*.*Stat} tmansour@loretta.hpcf.upr.edu:/storage/prcen/coral/p_ast.assemblies.2016/S_spCCMP2430/. ## clean porites asteroids transcriptome with annotation files
-
-
-
-
