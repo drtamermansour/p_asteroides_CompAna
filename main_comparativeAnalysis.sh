@@ -46,10 +46,15 @@ grep "^>" noSymb.fasta | wc -l  ## 681078
 noSymb_transcriptome=${p_asteroides}/blast_out/noSymb.fasta
 
 ## select annotation for significant hits
-#cat trinityVsSymb_best.sig | awk '{print ">"$1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.trinityVsSymb.key
-#filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp $LongOrfs.trinityVsSymb --seq_id_fp LongOrfs.trinityVsSymb.key
-#filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp $LongOrfs.trinityVsSymb.complete --seq_id_fp LongOrfs.trinityVsSymb.key
-#cat trinityVsSymb_best.sig | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.trinityVsSymb
+cat trinityVsSymb_best.sig | awk '{print ">"$1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.trinityVsSymb.key
+filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp $LongOrfs.trinityVsSymb --seq_id_fp LongOrfs.trinityVsSymb.key
+filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp $LongOrfs.trinityVsSymb.complete --seq_id_fp LongOrfs.trinityVsSymb.key
+grep "^>" $LongOrfs.trinityVsSymb | wc -l ## 221299 ## no of all possible ORF
+grep "^>" $LongOrfs.trinityVsSymb | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 89425 ## no of transcripts with ORF
+grep "^>" $LongOrfs.trinityVsSymb.complete | wc -l ## 124810 ## no of all possible complete ORF
+grep "^>" $LongOrfs.trinityVsSymb.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 59126 ## no of transcripts with complete ORF
+cat trinityVsSymb_best.sig | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.trinityVsSymb
+cat $swiss_ann.trinityVsSymb | awk '{print $1}' | sort | uniq | wc -l
 ######################################
 cd ${p_asteroides}/resources/coral_trans
 makeblastdb -in coral_trans.fasta -input_type fasta -dbtype nucl
@@ -202,7 +207,12 @@ Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.nam
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.coral.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.coral.pep --seq_id_fp LongOrfs.coral.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.coral.pep.complete --seq_id_fp LongOrfs.coral.key
-grep "^>" LongOrfs.coral.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 17277
+grep "^>" LongOrfs.coral.pep | wc -l ## 49348 ## no of all possible ORF
+grep "^>" LongOrfs.coral.pep | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 33331 ## no of transcripts with ORF
+grep "^>" LongOrfs.coral.pep.complete | wc -l ## 26802 ## no of all possible complete ORF
+grep "^>" LongOrfs.coral.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 17277 ## no of transcripts with complete ORF
+cat exp_isoformTPM | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.p_ast2016
+cat $swiss_ann.p_ast2016 | awk '{print $1}' | sort | uniq | wc -l
 ##############
 cd $abundFilter
 mkdir spC15
@@ -237,7 +247,12 @@ Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.nam
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.spC15.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.spC15.pep --seq_id_fp LongOrfs.spC15.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.spC15.pep.complete --seq_id_fp LongOrfs.spC15.key
-grep "^>" LongOrfs.spC15.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 20741
+grep "^>" LongOrfs.spC15.pep | wc -l ## 47310 ## no of all possible ORF
+grep "^>" LongOrfs.spC15.pep | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 29166 ## no of transcripts with ORF
+grep "^>" LongOrfs.spC15.pep.complete | wc -l ## 34480 ## no of all possible complete ORF
+grep "^>" LongOrfs.spC15.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 20741 ## no of transcripts with complete ORF
+cat exp_isoformTPM | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.spC15
+cat $swiss_ann.spC15 | awk '{print $1}' | sort | uniq | wc -l
 ##############
 cd $abundFilter
 mkdir cladeA
@@ -272,7 +287,12 @@ Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.nam
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.cladeA.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.cladeA.pep --seq_id_fp LongOrfs.cladeA.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.cladeA.pep.complete --seq_id_fp LongOrfs.cladeA.key
-grep "^>" LongOrfs.cladeA.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 33553
+grep "^>" LongOrfs.cladeA.pep | wc -l ## 147700 ## no of all possible ORF
+grep "^>" LongOrfs.cladeA.pep | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 48939 ## no of transcripts with ORF
+grep "^>" LongOrfs.cladeA.pep.complete | wc -l ## 81218 ## no of all possible complete ORF
+grep "^>" LongOrfs.cladeA.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 33553 ## no of transcripts with complete ORF
+cat exp_isoformTPM | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.cladeA
+cat $swiss_ann.cladeA | awk '{print $1}' | sort | uniq | wc -l
 ##############
 cd $abundFilter
 mkdir S_spCCMP2430
@@ -307,7 +327,12 @@ Rscript -e 'args=(commandArgs(TRUE)); data1=read.table(args[1], header=T,row.nam
 tail -n+2 exp_isoformTPM | awk '{print $1"|"}' | grep -F -f - $LongOrfs | sed 's/>//' > LongOrfs.S_spCCMP2430.key
 filter_fasta.py --input_fasta_fp $LongOrfs --output_fasta_fp LongOrfs.S_spCCMP2430.pep --seq_id_fp LongOrfs.S_spCCMP2430.key
 filter_fasta.py --input_fasta_fp $LongOrfs.complete --output_fasta_fp LongOrfs.S_spCCMP2430.pep.complete --seq_id_fp LongOrfs.S_spCCMP2430.key
-grep "^>" LongOrfs.S_spCCMP2430.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 3884
+grep "^>" LongOrfs.S_spCCMP2430.pep | wc -l ## 21039 ## no of all possible ORF
+grep "^>" LongOrfs.S_spCCMP2430.pep | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 8840 ## no of transcripts with ORF
+grep "^>" LongOrfs.S_spCCMP2430.pep.complete | wc -l ## 7261 ## no of all possible complete ORF
+grep "^>" LongOrfs.S_spCCMP2430.pep.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 3884 ## no of transcripts with complete ORF
+cat exp_isoformTPM | awk '{print $1}' | grep -w -F -f - $swiss_ann > $swiss_ann.S_spCCMP2430
+cat $swiss_ann.S_spCCMP2430 | awk '{print $1}' | sort | uniq | wc -l
 ##############
 ## Assessement of the transcriptome
 cd $compAnalysis
@@ -332,7 +357,7 @@ TrinityStats.pl $zoox_trans > $zoox_trans.TrinityStat
 cd ${p_asteroides}/resources/coral_trans/P_astreoides
 module load Bioperl/1.6.923
 perl ${script_path}/seq_stats.pl past.fasta > past.fasta.MatzStat
-# change to Trinity format
+# change to Trinity format and calc Trinity stats
 awk '{print $1,$2}' past.fasta > TRN1_past.fasta
 sed 's/>.*=/>/' TRN1_past.fasta > TRN2_past.fasta
 grep "^>" TRN2_past.fasta | sort | uniq -c > TRN_count
@@ -348,7 +373,40 @@ while read x id;do
 done < TRN_count
 module load trinity/2.2.0
 TrinityStats.pl TRN2_past.fasta > TRN2_past.fasta.TrinityStat
+# identify Long ORFs
+module load TransDecoder/2.0.1
+TransDecoder.LongOrfs -t past.fasta
+matzLongOrfs=$(pwd)/past.fasta.transdecoder_dir/longest_orfs.pep
+grep -A1 "type:complete" $matzLongOrfs | grep -v "^--" > $matzLongOrfs.complete 
+grep "^>" $matzLongOrfs | wc -l ## 18351 ## no of all possible ORF
+grep "^>" $matzLongOrfs | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 15183 ## no of transcripts with ORF
+grep "^>" $matzLongOrfs.complete | wc -l ## 3666 ## no of all possible complete ORF
+grep "^>" $matzLongOrfs.complete | awk -F '[>|]' '{print $2}' | sort | uniq | wc -l ## 2932 ## no of transcripts with complete ORF
 
+## Run blast
+module load BLAST+/2.2.30
+## header of blast output= qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
+mkdir ${p_asteroides}/uniprot
+cd ${p_asteroides}/uniprot
+wget ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+gunzip uniprot_sprot.fasta.gz
+makeblastdb -in uniprot_sprot.fasta -dbtype prot
+
+mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/blastx_dir
+cd  ${p_asteroides}/resources/coral_trans/P_astreoides/blastx_dir
+cp ../past.fasta .
+perl ${script_path}/splitFasta.pl past.fasta 30  ## 500 for uniprot_uniref90
+
+# header of blast output= qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
+for f in subset*_past.fasta; do
+  qsub -v input=$f,DB=${p_asteroides}/uniprot/uniprot_sprot.fasta,label="uniprot_sprot" ${script_path}/blastx_targetDB.sh;
+done
+cat subset*_past.fasta.bx > ../uniprot_sprot.blastx.outfmt6             
+cd ../
+cat uniprot_sprot.blastx.outfmt6 | awk '$11 <= 1e-3' > uniprot_sprot.blastx.outfmt6.sig    ## 15492
+sort -k1,1 -k12,12nr -k11,11n  uniprot_sprot.blastx.outfmt6.sig | sort -u -k1,1 --merge > uniprot_sprot.blastx.outfmt6.sig.best             ## 206780
+header='qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore\tqlen\tslen\tqcovs\tqcovhsp\tstitle'
+sed -i -e 1i"${header}" uniprot_sprot.blastx.outfmt6.sig.best
 
 #mkdir ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
 #cd ${p_asteroides}/resources/coral_trans/P_astreoides/P_ast.BlastDB
@@ -410,11 +468,11 @@ awk -F',' 'BEGIN{OFS=",";} {if($10=="true")print $1,$2,$11,$12;}' matz2013VSp_as
 tail -n+2 transrate_results/p_ast2016/contigs.csv | awk -F',' 'BEGIN{OFS=",";} {print $1,$2;}' | sort -t "," -k 1b,1 > p_ast2016_len.csv
 echo "qname qlen rcoverage rname rlen" > CRBB_withReflen
 join -1 4 -2 1 -t "," CRBB_hits.csv p_ast2016_len.csv | awk -F',' '{print $2,$3,$4,$1,$5;}' >> CRBB_withReflen
-cat CRBB_withReflen | awk '$5 > $2' > CRBB_oldAssVsnewAss_best_better
+tail -n+2 CRBB_withReflen | awk '$5 > $2' > CRBB_oldAssVsnewAss_best_better
 better=$(cat CRBB_oldAssVsnewAss_best_better | wc -l) ## 15115
-cat CRBB_withReflen | awk '$5 == $2' > CRBB_oldAssVsnewAss_best_equal
+tail -n+2 CRBB_withReflen | awk '$5 == $2' > CRBB_oldAssVsnewAss_best_equal
 equal=$(cat CRBB_oldAssVsnewAss_best_equal | wc -l) ## 14
-cat CRBB_withReflen | awk '$5 < $2' > CRBB_oldAssVsnewAss_best_less
+tail -n+2 CRBB_withReflen | awk '$5 < $2' > CRBB_oldAssVsnewAss_best_less
 less=$(cat CRBB_oldAssVsnewAss_best_less | wc -l) ## 6104
 newBetter=$(cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$5} END {print sum}') ## 36863704
 oldBetter=$(cat CRBB_oldAssVsnewAss_best_better | awk '{ sum+=$2} END {print sum}') ## 7022034 (i.e. difference of 29841670 =~29.5Mb)
